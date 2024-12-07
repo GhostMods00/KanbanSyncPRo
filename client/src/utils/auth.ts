@@ -5,7 +5,6 @@ export class AuthService {
   private static inactivityTimer: NodeJS.Timeout | null = null;
 
   static init(): void {
-    // Set up inactivity listeners
     ['mousedown', 'keydown', 'touchstart', 'mousemove'].forEach(event => {
       document.addEventListener(event, () => this.resetInactivityTimer());
     });
@@ -14,13 +13,10 @@ export class AuthService {
 
   static setToken(token: string): void {
     localStorage.setItem(this.TOKEN_KEY, token);
-    
-    // Store token expiry
     const payload = this.parseJwt(token);
     if (payload.exp) {
       localStorage.setItem(this.TOKEN_EXPIRY_KEY, payload.exp.toString());
     }
-    
     this.resetInactivityTimer();
   }
 
