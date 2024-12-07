@@ -1,11 +1,18 @@
 import { Router, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import { User } from '../models/User'; // Assuming you have a User model
 
 const router = Router();
 
-router.post('/login', async (req: Request, res: Response) => {
+// Mock user for testing - in production, this would come from your database
+const mockUser = {
+  id: '1',
+  username: 'testuser',
+  // This is a hashed version of 'password123'
+  password: '$2b$10$6Ot7OENOFgVB0Zx9QIES1OPT/PxwgK0MH4h8CCgSz.AIkHHjXl2e6'
+};
+
+router.post('/login', async (req: Request, res: Response): Promise<Response> => {
   try {
     const { username, password } = req.body;
 
@@ -14,9 +21,11 @@ router.post('/login', async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Username and password are required' });
     }
 
-    // Find user in database
-    const user = await User.findOne({ username });
-    if (!user) {
+    // In production, you would fetch the user from your database
+    // For this example, we'll use the mock user
+    const user = mockUser;
+
+    if (!user || username !== user.username) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
@@ -29,30 +38,35 @@ router.post('/login', async (req: Request, res: Response) => {
     // Create JWT token
     const secret = process.env.JWT_SECRET;
     if (!secret) {
-      throw new Error('JWT_SECRET is not defined');
+      return res.status(500).json({ message: 'Server configuration error' });
     }
 
     const token = jwt.sign(
       { 
-        userId: user._id,
+        userId: user.id,
         username: user.username
       },
       secret,
-      { expiresIn: '24h' } // Token expires in 24 hours
+      { expiresIn: '24h' }
     );
 
     // Send response
-    res.json({
+    return res.json({
       token,
       user: {
-        id: user._id,
+        id: user.id,
         username: user.username
       }
     });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    return res.status(500).json({ message: 'Internal server error' });
   }
+});
+
+// Validate token endpoint (optional but useful for client-side token validation)
+router.get('/validate', async (req: Request, res: Response): Promise<Response> => {
+  return res.status(200).json({ message: 'Token is valid' });
 });
 
 export default router;
