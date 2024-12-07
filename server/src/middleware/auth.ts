@@ -9,7 +9,7 @@ export const authenticateToken = (
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
-) => {
+): Response | void => {  // Explicitly define return types
   // Get the token from the Authorization header
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -23,7 +23,7 @@ export const authenticateToken = (
     // Verify the token using the JWT_SECRET from environment variables
     const secret = process.env.JWT_SECRET;
     if (!secret) {
-      throw new Error('JWT_SECRET is not defined in environment variables');
+      return res.status(500).json({ message: 'Server configuration error' });
     }
 
     // Verify and decode the token
@@ -33,7 +33,7 @@ export const authenticateToken = (
     req.user = decoded;
     
     // Proceed to the next middleware/route handler
-    next();
+    return next();
   } catch (error) {
     // Handle different types of JWT errors
     if (error instanceof jwt.TokenExpiredError) {
