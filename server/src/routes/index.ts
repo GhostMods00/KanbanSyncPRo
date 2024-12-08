@@ -1,13 +1,14 @@
 import { Router } from 'express';
-import authRoutes from './auth-routes';
-import { authenticateToken } from '../middleware/auth';
+import authRoutes from './auth-routes.js';
+import apiRoutes from './api/index.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = Router();
 
-// Public routes
+// Public routes (no authentication required)
 router.use('/auth', authRoutes);
 
-// Protected routes - add your board routes here
-router.use('/api', authenticateToken);
+// Protected API routes (authentication required)
+router.use('/api', authenticateToken, apiRoutes);
 
 export default router;
