@@ -1,45 +1,45 @@
-import { AuthService } from '../utils/auth';
+// src/api/authAPI.tsx
+import axios from 'axios';
+
+interface LoginResponse {
+  token: string;
+  user: {
+    id: number;
+    username: string;
+  };
+}
 
 interface LoginCredentials {
   username: string;
   password: string;
 }
 
-interface LoginResponse {
-  token: string;
-  user: {
-    id: string;
-    username: string;
-  };
-}
-
-export const authAPI = {
-  async login(credentials: LoginCredentials): Promise<LoginResponse> {
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
+export const login = async (credentials: LoginCredentials): Promise<LoginResponse> => {
+  try {
+    const response = await axios.post<LoginResponse>(
+      '/api/auth/login',
+      credentials,
+      {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(credentials),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Login failed');
       }
+    );
 
-      const data = await response.json();
-      AuthService.setToken(data.token);
-      return data;
-    } catch (error) {
-      throw error;
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(error.response.data.message || 'Login failed');
     }
-  },
-
-  async logout(): Promise<void> {
-    AuthService.removeToken();
+    throw new Error('Login request failed');
   }
 };
 
-export default authAPI;
+export const checkAuthStatus = async (): Promise<boolean> => {
+  try {
+    await axios.get('/api/auth/verify');
+    return true;
+  } catch {
+    return false;
+  }
+};

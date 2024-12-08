@@ -1,6 +1,19 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
+interface JwtPayload {
+  id: number;
+  username: string;
+}
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: JwtPayload;
+    }
+  }
+}
+
 export const authenticateToken = (
   req: Request,
   res: Response,
@@ -17,12 +30,11 @@ export const authenticateToken = (
     const decoded = jwt.verify(
       token,
       process.env.JWT_SECRET || 'your-secret-key'
-    ) as {
-      id: number;
-      username: string;
-    };
+    ) as JwtPayload;
 
+    // Add the user data to the request object
     req.user = decoded;
+    
     return next();
   } catch (error) {
     return res.status(403).json({ message: 'Invalid token' });

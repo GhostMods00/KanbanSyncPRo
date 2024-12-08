@@ -1,68 +1,46 @@
-export class AuthService {
-  private static readonly TOKEN_KEY = 'auth_token';
-  private static readonly TOKEN_EXPIRY_KEY = 'token_expiry';
-  private static readonly INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes
-  private static inactivityTimer: NodeJS.Timeout | null = null;
+// src/utils/auth.ts
 
-  static init(): void {
-    ['mousedown', 'keydown', 'touchstart', 'mousemove'].forEach(event => {
-      document.addEventListener(event, () => this.resetInactivityTimer());
-    });
-    this.resetInactivityTimer();
+class AuthService {
+  private static tokenKey = 'jwt_token';
+  private static expirationKey = 'token_expiration';
+
+  static login(token: string): void {
+    // Store the token
+    localStorage.setItem(this.tokenKey, token);
+    
+    // Set expiration to 24 hours from now
+    const expiration = new Date();
+    expiration.setHours(expiration.getHours() + 24);
+    localStorage.setItem(this.expirationKey, expiration.toISOString());
   }
 
-  static setToken(token: string): void {
-    localStorage.setItem(this.TOKEN_KEY, token);
-    const payload = this.parseJwt(token);
-    if (payload.exp) {
-      localStorage.setItem(this.TOKEN_EXPIRY_KEY, payload.exp.toString());
-    }
-    this.resetInactivityTimer();
+  static logout(): void {
+    localStorage.removeItem(this.tokenKey);
+    localStorage.removeItem(this.expirationKey);
+    window.location.href = '/login';
   }
 
   static getToken(): string | null {
-    return localStorage.getItem(this.TOKEN_KEY);
+    return localStorage.getItem(this.tokenKey);
   }
 
-  static removeToken(): void {
-    localStorage.removeItem(this.TOKEN_KEY);
-    localStorage.removeItem(this.TOKEN_EXPIRY_KEY);
-    if (this.inactivityTimer) {
-      clearTimeout(this.inactivityTimer);
-    }
-  }
-
-  static isAuthenticated(): boolean {
+  static loggedIn(): boolean {
     const token = this.getToken();
-    if (!token) return false;
-
-    const expiry = localStorage.getItem(this.TOKEN_EXPIRY_KEY);
-    if (!expiry) return false;
-
-    return Date.now() < parseInt(expiry) * 1000;
-  }
-
-  private static resetInactivityTimer(): void {
-    if (this.inactivityTimer) {
-      clearTimeout(this.inactivityTimer);
+    const expiration = localStorage.getItem(this.expirationKey);
+    
+    if (!token || !expiration) {
+      return false;
     }
 
-    this.inactivityTimer = setTimeout(() => {
-      this.removeToken();
-      window.location.href = '/login?session=expired';
-    }, this.INACTIVITY_TIMEOUT);
-  }
-
-  private static parseJwt(token: string): any {
-    try {
-      return JSON.parse(atob(token.split('.')[1]));
-    } catch {
-      return {};
+    // Check if token is expired
+    const isExpired = new Date() > new Date(expiration);
+    if (isExpired) {
+      this.logout();
+      return false;
     }
+
+    return true;
   }
 }
-
-// Initialize the authentication service
-AuthService.init();
 
 export default AuthService;
