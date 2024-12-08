@@ -1,45 +1,32 @@
-// src/api/authAPI.tsx
 import axios from 'axios';
 
-interface LoginResponse {
-  token: string;
-  user: {
-    id: number;
-    username: string;
-  };
-}
+const API_URL = 'http://localhost:3001/api'; // adjust port if needed
 
-interface LoginCredentials {
-  username: string;
-  password: string;
-}
-
-export const login = async (credentials: LoginCredentials): Promise<LoginResponse> => {
-  try {
-    const response = await axios.post<LoginResponse>(
-      '/api/auth/login',
-      credentials,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-
-    return response.data;
-  } catch (error) {
-    if (axios.isAxiosError(error) && error.response) {
-      throw new Error(error.response.data.message || 'Login failed');
+export const login = async (credentials: { username: string; password: string }) => {
+    try {
+        const response = await axios.post(`${API_URL}/auth/login`, credentials);
+        // Store the token
+        if (response.data.token) {
+            localStorage.setItem('jwt_token', response.data.token);
+            // Add token to all future requests
+            axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
+        }
+        return response.data;
+    } catch (error) {
+        throw error;
     }
-    throw new Error('Login request failed');
-  }
 };
 
-export const checkAuthStatus = async (): Promise<boolean> => {
-  try {
-    await axios.get('/api/auth/verify');
-    return true;
-  } catch {
-    return false;
-  }
-};
+// Add axios interceptor to include token in all requests
+axios.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('jwt_token');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
+    }
+);
